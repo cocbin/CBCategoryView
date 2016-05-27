@@ -24,7 +24,6 @@
     self.title = @"DEMO";
     CBCategoryView * categoryView = [[CBCategoryView alloc] initWithPosition:CGPointMake(0,64) andHeight:40];
     [self.view addSubview:categoryView];
-    [categoryView dataSource:nil];
     [categoryView dataSource:self.category];
     [categoryView controller:self
       getChildViewController:^(CBCategoryView * cbCategoryView, NSInteger index) {
