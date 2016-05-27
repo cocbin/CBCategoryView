@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Workspace
+   version = "1.0">
+   <FileRef
+      location = "group:CBCategoryView/CBCategoryView.xcodeproj">
+   </FileRef>
+   <FileRef
+      location = "group:CBCategoryViewDemo/CBCategoryViewDemo.xcodeproj">
+   </FileRef>
+</Workspace>
