@@ -25,9 +25,33 @@ Pod::Spec.new do |s|
   #   * Write the description between the DESC delimiters below.
   #   * Finally, don't worry about the indent, CocoaPods strips it!
   s.description  = <<-DESC
+  实例化 CBCategoryView
+
+  ```
+  CBCategoryView * categoryView = [[CBCategoryView alloc] initWithPosition:CGPointMake(0,64) andHeight:40];
+  [self.view addSubview:categoryView];
+  ```
+
+  添加数据
+
+  ```
+  [categoryView dataSource:self.category];
+  //self.category is a string array
+  ```
+
+  使用block设置当切换tab时使用的ViewController
+
+  ```
+  [categoryView controller:self
+        getChildViewController:^(CBCategoryView * cbCategoryView, NSInteger index) {
+            ChildViewController * childViewController = [[ChildViewController alloc] init];
+            childViewController.param = self.category[(NSUInteger) index];
+            return childViewController;
+        }];
+  ```
                    DESC
 
-  s.homepage     = "http://EXAMPLE/CBCategoryView"
+  s.homepage     = "https://github.com/cocbin/CBCategoryView"
   # s.screenshots  = "www.example.com/screenshots_1.gif", "www.example.com/screenshots_2.gif"
 
 

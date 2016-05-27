@@ -237,7 +237,7 @@
         if(_childControllers[@(selectedIndex)]) {
             [self.controller transitionFromViewController:_currentController
                                          toViewController:_childControllers[@(selectedIndex)] duration:0.2
-                                                  options:nil
+                                                  options:UIViewAnimationOptionTransitionNone
                                                animations:nil
                                                completion:nil];
             _currentController = _childControllers[@(selectedIndex)];
@@ -250,7 +250,7 @@
             childViewController.view.frame = frame;
             [self.controller transitionFromViewController:_currentController
                                          toViewController:_childControllers[@(selectedIndex)] duration:0.2
-                                                  options:nil
+                                                  options:UIViewAnimationOptionTransitionNone
                                                animations:nil
                                                completion:nil];
             _currentController = childViewController;
