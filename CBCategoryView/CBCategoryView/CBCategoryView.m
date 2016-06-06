@@ -190,6 +190,7 @@
         [self.controller addChildViewController:childViewController];
         CGRect frame = childViewController.view.frame;
         frame.origin.y = self.frame.origin.y+self.height;
+        frame.size.height = frame.size.height - frame.origin.y;
         childViewController.view.frame = frame;
         [self.controller.view addSubview:childViewController.view];
         _currentController = childViewController;
@@ -247,6 +248,7 @@
             [self.controller addChildViewController:childViewController];
             CGRect frame = childViewController.view.frame;
             frame.origin.y = self.frame.origin.y+self.height;
+            frame.size.height = frame.size.height - frame.origin.y;
             childViewController.view.frame = frame;
             [self.controller transitionFromViewController:_currentController
                                          toViewController:_childControllers[@(selectedIndex)] duration:0.2
