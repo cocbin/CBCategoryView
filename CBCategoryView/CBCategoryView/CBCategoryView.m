@@ -86,6 +86,8 @@
     UIView * _triangleBackgroundView;
     CGFloat _collectionViewHeight;
     UIViewController * _currentController;
+
+    UIView * subViewOfController;
 }
 
 - (instancetype)initWithPosition:(CGPoint)position andHeight:(CGFloat)height {
@@ -185,15 +187,16 @@
     currentBtn.titleLabel.font = [UIFont systemFontOfSize:16];
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        UIViewController * childViewController = self.getChildController(self,0);
-        _childControllers[@(0)] = childViewController;
-        [self.controller addChildViewController:childViewController];
-        CGRect frame = childViewController.view.frame;
-        frame.origin.y = self.frame.origin.y+self.height;
-        frame.size.height = frame.size.height - frame.origin.y;
-        childViewController.view.frame = frame;
-        [self.controller.view addSubview:childViewController.view];
-        _currentController = childViewController;
+        if(self.getChildController&&self.controller) {
+            UIViewController * childViewController = self.getChildController(self, 0);
+            _childControllers[@(0)] = childViewController;
+
+            [self.controller addChildViewController:childViewController];
+            [self.controller.view bringSubviewToFront:self];
+            [childViewController.view setFrame:subViewOfController.bounds];
+            [subViewOfController addSubview:childViewController.view];
+            _currentController = childViewController;
+        }
     });
 
 }
@@ -208,6 +211,12 @@
 }
 
 - (void)setSelectedIndex:(NSUInteger)selectedIndex {
+    static BOOL animating = NO;
+
+    if(animating) {
+        return ;
+    }
+
     if (selectedIndex == _selectedIndex) {
         return;
     }
@@ -236,25 +245,29 @@
 
     if(self.getChildController&&self.controller) {
         if(_childControllers[@(selectedIndex)]) {
+            animating = YES;
             [self.controller transitionFromViewController:_currentController
-                                         toViewController:_childControllers[@(selectedIndex)] duration:0.2
-                                                  options:UIViewAnimationOptionTransitionNone
+                                         toViewController:_childControllers[@(selectedIndex)] duration:0.3
+                                                  options:UIViewAnimationOptionTransitionCrossDissolve
                                                animations:nil
-                                               completion:nil];
+                                               completion:^(BOOL finish) {
+                                                   animating = !finish;
+                                               }];
             _currentController = _childControllers[@(selectedIndex)];
         } else {
             UIViewController * childViewController = self.getChildController(self,selectedIndex);
             _childControllers[@(selectedIndex)] = childViewController;
+            [childViewController.view setFrame:subViewOfController.bounds];
             [self.controller addChildViewController:childViewController];
-            CGRect frame = childViewController.view.frame;
-            frame.origin.y = self.frame.origin.y+self.height;
-            frame.size.height = frame.size.height - frame.origin.y;
-            childViewController.view.frame = frame;
+            [self.controller.view bringSubviewToFront:self];
+            animating = YES;
             [self.controller transitionFromViewController:_currentController
-                                         toViewController:_childControllers[@(selectedIndex)] duration:0.2
-                                                  options:UIViewAnimationOptionTransitionNone
+                                         toViewController:_childControllers[@(selectedIndex)] duration:0.3
+                                                  options:UIViewAnimationOptionTransitionCrossDissolve
                                                animations:nil
-                                               completion:nil];
+                                               completion:^(BOOL finish) {
+                                                   animating = !finish;
+                                               }];
             _currentController = childViewController;
         }
     }
@@ -266,7 +279,7 @@
     }
     [UIView animateWithDuration:0.2 animations:^() {
         if (showSubMenu) {
-            _triangle.transform = CGAffineTransformMakeRotation(M_PI);
+            _triangle.transform = CGAffineTransformMakeRotation((CGFloat) M_PI);
             [self.superview addSubview:_backgroundView];
             [self.superview addSubview:_collectionView];
             CGRect frame = _collectionView.frame;
@@ -277,7 +290,7 @@
                 _triangleBackgroundView.backgroundColor = TRIANGLE_BG_COLOR_HL;
             }];
         } else {
-            _triangle.transform = CGAffineTransformMakeRotation(M_PI * 2);
+            _triangle.transform = CGAffineTransformMakeRotation((CGFloat) (M_PI * 2.0f));
             CGRect frame = _collectionView.frame;
             frame.size.height = 0;
             [UIView animateWithDuration:0.2 animations:^{
@@ -329,6 +342,12 @@
 - (void)controller:(UIViewController *)controller getChildViewController:(UIViewController * (^)(CBCategoryView * ,NSInteger))delegate {
     self.controller = controller;
     self.getChildController = delegate;
+    CGRect frame = controller.view.bounds;
+    frame.origin.y = self.frame.origin.y + self.frame.size.height;
+    frame.size.height -= frame.origin.y;
+    subViewOfController = [[UIView alloc] initWithFrame:frame];
+    subViewOfController.backgroundColor = [UIColor blackColor];
+    [controller.view addSubview:subViewOfController];
 }
 
 @end

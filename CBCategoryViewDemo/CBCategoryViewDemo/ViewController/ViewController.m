@@ -8,6 +8,7 @@
 
 #import "ViewController.h"
 #import "ChildViewController.h"
+#import "ChildViewModel.h"
 #import <CBCategoryView/CBCategoryView.h>
 
 @interface ViewController ()
@@ -28,7 +29,8 @@
     [categoryView controller:self
       getChildViewController:^(CBCategoryView * cbCategoryView, NSInteger index) {
           ChildViewController * childViewController = [[ChildViewController alloc] init];
-          childViewController.param = self.category[(NSUInteger) index];
+          childViewController.viewModel = [[ChildViewModel alloc]init];
+          childViewController.viewModel.categoryId = index;
           return childViewController;
       }];
 }
