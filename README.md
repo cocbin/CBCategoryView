@@ -11,7 +11,7 @@
 通过cocoapods下载
 
 ```
-pod 'CBCategoryView', '~> 0.0.2'
+pod 'CBCategoryView', '~> 0.0.3'
 ```
 
 导入库
@@ -69,4 +69,3 @@ categoryView.controller(self)
 
 * reloadData()
 当重新绑定数据的时候，调用reloadData方法，用于刷新数据。
-
