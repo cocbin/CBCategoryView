@@ -8,20 +8,22 @@
 
 #import "CBCategoryView.h"
 
+#pragma mark -- default value
 #define CELL_WIDTH 100
-#define TEXT_NORMAL_COLOR  [UIColor colorWithRed:147/255.0 green:157/255.0 blue:147/255.0 alpha:1]
-#define TEXT_SELECT_COLOR [UIColor colorWithRed:0 green:0 blue:0 alpha:1]
-#define BOTTOM_SHADOWS_COLOR [UIColor colorWithRed:233/255.0 green:233/255.0 blue:233/255.0 alpha:1]
-#define COLLECTION_CELL_HEIGHT_LIGHT_COLOR [UIColor colorWithRed:243/255.0 green:243/255.0 blue:243/255.0 alpha:1]
-#define TRIANGLE_BG_COLOR_NORMAL [UIColor colorWithRed:243/255.0 green:243/255.0 blue:243/255.0 alpha:1]
-#define TRIANGLE_BG_COLOR_HL [UIColor colorWithRed:230/255.0 green:230/255.0 blue:230/255.0 alpha:1]
-
-#define COLLECTION_CELL_NORMAL_COLOR [UIColor whiteColor]
-
 #define COLLECTION_ONE_LINE_COUNT 3
-
+#pragma mark -- color
+#define CB_CATEGORY_RGB(r, g, b) [UIColor colorWithRed:r/255.0 green:g/255.0 blue:b/255.0 alpha:1]
+#define COLOR_TEXT_NORMAL  CB_CATEGORY_RGB(147,157,147)
+#define COLOR_TEXT_SELECT CB_CATEGORY_RGB(0,0,0)
+#define COLOR_BOTTOM_SHADOWS CB_CATEGORY_RGB(233,233,233)
+#define COLOR_CELL_NORMAL [UIColor whiteColor]
+#define COLOR_CELL_HL CB_CATEGORY_RGB(243,243,243)
+#define COLOR_TRIANGLE_BG_NORMAL COLOR_CELL_HL
+#define COLOR_TRIANGLE_BG_HL CB_CATEGORY_RGB(230,230,230)
+#pragma mark -- cell identifier
 #define COLLECTION_VIEW_CELL @"LabelCollectionCell"
 
+#pragma mark -- Triangle
 
 @interface CBTriangle : UIControl
 @end
@@ -34,13 +36,14 @@
     sPoints[1] = CGPointMake(23, 18);
     sPoints[2] = CGPointMake(20, 22);
     CGContextSetRGBFillColor(context, 0.7, 0.7, 0.7, 1);
-    CGContextSetRGBStrokeColor(context,0.7, 0.7, 0.7, 1);
-    CGContextAddLines(context, sPoints, 3);//添加线
-    CGContextClosePath(context);//封起来
-    CGContextDrawPath(context, kCGPathFillStroke); //根据坐标绘制路径
+    CGContextSetRGBStrokeColor(context, 0.7, 0.7, 0.7, 1);
+    CGContextAddLines(context, sPoints, 3);
+    CGContextClosePath(context);
+    CGContextDrawPath(context, kCGPathFillStroke);
 }
 @end
 
+#pragma mark -- Cell
 
 @interface LabelCollectionCell : UICollectionViewCell
 @property UILabel * label;
@@ -53,7 +56,7 @@
         _label = [[UILabel alloc] initWithFrame:self.bounds];
         _label.textAlignment = NSTextAlignmentCenter;
         _label.backgroundColor = [UIColor whiteColor];
-        _label.layer.borderColor = [BOTTOM_SHADOWS_COLOR CGColor];
+        _label.layer.borderColor = [COLOR_BOTTOM_SHADOWS CGColor];
         _label.layer.borderWidth = 0.25;
         _label.font = [UIFont systemFontOfSize:14];
         [self addSubview:_label];
@@ -62,18 +65,18 @@
 }
 @end
 
+#pragma mark -- CBCategoryView
 
 @interface CBCategoryView () <UICollectionViewDataSource, UICollectionViewDelegate>
 
 @property(nonatomic, strong) UIScrollView * scrollView;
-@property(nonatomic, retain) NSArray * category;
 @property(nonatomic, assign) CGFloat height;
 @property(nonatomic, assign) NSUInteger selectedIndex;
 @property(nonatomic, assign) bool showSubMenu;
 
-@property (weak, nonatomic)UIViewController * controller;
-@property (nonatomic, retain) NSMutableDictionary * childControllers;
-@property (nonatomic, copy) UIViewController * (^getChildController)(CBCategoryView *,NSInteger);
+@property(weak, nonatomic) UIViewController * superController;
+@property(nonatomic, retain) NSMutableDictionary * childControllers;
+//@property(nonatomic, copy) UIViewController * (^getChildController)(CBCategoryView *, NSInteger);
 
 @end
 
@@ -86,39 +89,42 @@
     UIView * _triangleBackgroundView;
     CGFloat _collectionViewHeight;
     UIViewController * _currentController;
+    NSArray * _category;
 
     UIView * subViewOfController;
+
+    NSString * (^decodeDataBlock)(id);
+    UIViewController * (^_childController)(NSUInteger, id);
 }
 
 - (instancetype)initWithPosition:(CGPoint)position andHeight:(CGFloat)height {
+    CGFloat triangleViewWidth = 40;
     CGSize screenSize = [UIScreen mainScreen].bounds.size;
     self.height = height;
     self = [super initWithFrame:CGRectMake(position.x, position.y, screenSize.width, height)];
-    _centerOfScrollView = (screenSize.width - 40 - CELL_WIDTH) / 2;
+    _centerOfScrollView = (screenSize.width - triangleViewWidth - CELL_WIDTH) / 2;
     if (self) {
         self.backgroundColor = [UIColor whiteColor];
 
-        self.scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, screenSize.width - 40, height)];
+        self.scrollView = [[UIScrollView alloc] initWithFrame:CGRectMake(0, 0, screenSize.width - triangleViewWidth, height)];
         self.scrollView.backgroundColor = [UIColor whiteColor];
         self.scrollView.showsHorizontalScrollIndicator = NO;
         [self addSubview:self.scrollView];
 
-        _triangle = [[CBTriangle alloc] initWithFrame:CGRectMake(screenSize.width - 40, 0, 40, height)];
+        _triangle = [[CBTriangle alloc] initWithFrame:CGRectMake(screenSize.width - triangleViewWidth, (height-40)/2, triangleViewWidth, 40)];
         _triangle.backgroundColor = [UIColor clearColor];
         [_triangle addTarget:self action:@selector(clickTriangle) forControlEvents:UIControlEventTouchUpInside];
-
-        _triangleBackgroundView = [[UIView alloc] initWithFrame:_triangle.frame];
-        _triangleBackgroundView.backgroundColor = TRIANGLE_BG_COLOR_NORMAL;
-
+        _triangleBackgroundView = [[UIView alloc] initWithFrame:CGRectMake(_triangle.frame.origin.x,0,triangleViewWidth,height)];
+        _triangleBackgroundView.backgroundColor = COLOR_TRIANGLE_BG_NORMAL;
         UIView * _triangleBorderView = [[UIView alloc] initWithFrame:
-                CGRectMake(_triangle.frame.origin.x,_triangle.frame.origin.y,1,height)];
-        _triangleBorderView.backgroundColor = BOTTOM_SHADOWS_COLOR;
-
+                CGRectMake(_triangleBackgroundView.frame.origin.x, _triangleBackgroundView.frame.origin.y, 1, height)];
+        _triangleBorderView.backgroundColor = COLOR_BOTTOM_SHADOWS;
         [self addSubview:_triangleBackgroundView];
         [self addSubview:_triangle];
         [self addSubview:_triangleBorderView];
+
         UIView * bottomShadows = [[UIView alloc] initWithFrame:CGRectMake(0, (CGFloat) (height - 1), screenSize.width, 1)];
-        bottomShadows.backgroundColor = BOTTOM_SHADOWS_COLOR;
+        bottomShadows.backgroundColor = COLOR_BOTTOM_SHADOWS;
         [self addSubview:bottomShadows];
 
         _backgroundView = [[UIControl alloc] initWithFrame:CGRectMake(self.frame.origin.x, self.frame.origin.y + height, screenSize.width, screenSize.height)];
@@ -130,7 +136,7 @@
         flowLayout.minimumInteritemSpacing = 0;
         flowLayout.minimumLineSpacing = 0;
         flowLayout.itemSize = CGSizeMake((CGFloat) (screenSize.width / COLLECTION_ONE_LINE_COUNT), 36);
-        _collectionView = [[UICollectionView alloc] initWithFrame:CGRectMake(position.x, (CGFloat) (position.y + height -0.25), screenSize.width, 0) collectionViewLayout:flowLayout];
+        _collectionView = [[UICollectionView alloc] initWithFrame:CGRectMake(position.x, (CGFloat) (position.y + height - 0.25), screenSize.width, 0) collectionViewLayout:flowLayout];
         _collectionView.dataSource = self;
         _collectionView.delegate = self;
         _collectionView.backgroundColor = [UIColor whiteColor];
@@ -141,13 +147,6 @@
     return self;
 }
 
-- (void)dataSource:(NSArray *)dataSource {
-    self.category = dataSource;
-    _collectionViewHeight = ((self.category.count-1) / COLLECTION_ONE_LINE_COUNT + 1) * 36;
-    [self initScrollView];
-    [self initView];
-}
-
 - (void)initScrollView {
     //clear button
     for (UIView * v in self.scrollView.subviews) {
@@ -155,8 +154,8 @@
     }
 
     //clear child view controller
-    if(_childControllers&&_controller) {
-        for(UIViewController * child in _childControllers) {
+    if (_childControllers && _superController) {
+        for (UIViewController * child in _childControllers) {
             [child.view removeFromSuperview];
             [child removeFromParentViewController];
         }
@@ -166,39 +165,47 @@
 
     _btnList = nil;
     _btnList = [[NSMutableArray alloc] init];
-    for (NSUInteger i = 0; i < self.category.count; ++ i) {
+    for (NSUInteger i = 0; i < _category.count; ++ i) {
         UIButton * btn = [[UIButton alloc] initWithFrame:CGRectMake(i * CELL_WIDTH, 0, CELL_WIDTH, self.height)];
-        [btn setTitle:self.category[(NSUInteger) i] forState:UIControlStateNormal];
-        [btn setTitleColor:TEXT_NORMAL_COLOR forState:UIControlStateNormal];
+        NSString * title;
+        if (decodeDataBlock) {
+            title = decodeDataBlock(_category[(NSUInteger) i]);
+        } else {
+            NSAssert([_category[(NSUInteger) i] isKindOfClass:[NSString class]],
+                    @"[CBCategoryView Error]:data is not a string , "
+                            "please post a String Array or use decodeData() to decode data.");
+            title = _category[(NSUInteger) i];
+        }
+
+        [btn setTitle:title forState:UIControlStateNormal];
+        [btn setTitleColor:COLOR_TEXT_NORMAL forState:UIControlStateNormal];
         btn.titleLabel.font = [UIFont systemFontOfSize:14];
         [btn addTarget:self action:@selector(selectCategory:) forControlEvents:UIControlEventTouchUpInside];
         [btn setTag:1000 + i];
         [_btnList addObject:btn];
         [self.scrollView addSubview:btn];
     }
-    self.scrollView.contentSize = CGSizeMake(self.category.count * CELL_WIDTH, self.height);
+    self.scrollView.contentSize = CGSizeMake(_category.count * CELL_WIDTH, self.height);
 }
 
-- (void) initView {
+- (void)initView {
     _selectedIndex = 0;
 
     UIButton * currentBtn = _btnList[0];
-    [currentBtn setTitleColor:TEXT_SELECT_COLOR forState:UIControlStateNormal];
+    [currentBtn setTitleColor:COLOR_TEXT_SELECT forState:UIControlStateNormal];
     currentBtn.titleLabel.font = [UIFont systemFontOfSize:16];
 
     dispatch_async(dispatch_get_main_queue(), ^{
-        if(self.getChildController&&self.controller) {
-            UIViewController * childViewController = self.getChildController(self, 0);
+        if (_childController && self.superController && _category.count > 0) {
+            UIViewController * childViewController = _childController(0, _category[0]);
             _childControllers[@(0)] = childViewController;
-
-            [self.controller addChildViewController:childViewController];
-            [self.controller.view bringSubviewToFront:self];
+            [self.superController addChildViewController:childViewController];
+            [self.superController.view bringSubviewToFront:self];
             [childViewController.view setFrame:subViewOfController.bounds];
             [subViewOfController addSubview:childViewController.view];
             _currentController = childViewController;
         }
     });
-
 }
 
 - (void)selectCategory:(UIView *)sender {
@@ -213,8 +220,8 @@
 - (void)setSelectedIndex:(NSUInteger)selectedIndex {
     static BOOL animating = NO;
 
-    if(animating) {
-        return ;
+    if (animating) {
+        return;
     }
 
     if (selectedIndex == _selectedIndex) {
@@ -230,46 +237,36 @@
     UIButton * currentBtn = _btnList[selectedIndex];
     [UIView beginAnimations:nil context:nil];
     [UIView setAnimationDuration:0.2];
-    [lastBtn setTitleColor:TEXT_NORMAL_COLOR forState:UIControlStateNormal];
+    [lastBtn setTitleColor:COLOR_TEXT_NORMAL forState:UIControlStateNormal];
     lastBtn.titleLabel.font = [UIFont systemFontOfSize:14];
-    [currentBtn setTitleColor:TEXT_SELECT_COLOR forState:UIControlStateNormal];
+    [currentBtn setTitleColor:COLOR_TEXT_SELECT forState:UIControlStateNormal];
     currentBtn.titleLabel.font = [UIFont systemFontOfSize:16];
     self.scrollView.contentOffset = CGPointMake(selectedIndex * CELL_WIDTH - _centerOfScrollView, 0);
     [UIView commitAnimations];
-    if(_changeSelelct) {
-        _changeSelelct(selectedIndex);
-    }
+
     _selectedIndex = selectedIndex;
 
-    // change sub view controller
-
-    if(self.getChildController&&self.controller) {
-        if(_childControllers[@(selectedIndex)]) {
-            animating = YES;
-            [self.controller transitionFromViewController:_currentController
-                                         toViewController:_childControllers[@(selectedIndex)] duration:0.3
-                                                  options:UIViewAnimationOptionTransitionCrossDissolve
-                                               animations:nil
-                                               completion:^(BOOL finish) {
-                                                   animating = !finish;
-                                               }];
-            _currentController = _childControllers[@(selectedIndex)];
+    if (_childController && self.superController) {
+        animating = YES;
+        UIViewController * nextController;
+        if (_childControllers[@(selectedIndex)]) {
+            nextController = _childControllers[@(selectedIndex)];
         } else {
-            UIViewController * childViewController = self.getChildController(self,selectedIndex);
+            UIViewController * childViewController = _childController(selectedIndex,_category[selectedIndex]);
             _childControllers[@(selectedIndex)] = childViewController;
+            nextController = childViewController;
             [childViewController.view setFrame:subViewOfController.bounds];
-            [self.controller addChildViewController:childViewController];
-            [self.controller.view bringSubviewToFront:self];
-            animating = YES;
-            [self.controller transitionFromViewController:_currentController
-                                         toViewController:_childControllers[@(selectedIndex)] duration:0.3
-                                                  options:UIViewAnimationOptionTransitionCrossDissolve
-                                               animations:nil
-                                               completion:^(BOOL finish) {
-                                                   animating = !finish;
-                                               }];
-            _currentController = childViewController;
+            [self.superController addChildViewController:childViewController];
         }
+        [self.superController transitionFromViewController:_currentController
+                                     toViewController:_childControllers[@(selectedIndex)] duration:0.3
+                                              options:UIViewAnimationOptionTransitionCrossDissolve
+                                           animations:nil
+                                           completion:^(BOOL finish) {
+                                               animating = ! finish;
+                                           }];
+        _currentController = nextController;
+
     }
 }
 
@@ -287,7 +284,7 @@
             [UIView animateWithDuration:0.2 animations:^{
                 _backgroundView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.3];
                 _collectionView.frame = frame;
-                _triangleBackgroundView.backgroundColor = TRIANGLE_BG_COLOR_HL;
+                _triangleBackgroundView.backgroundColor = COLOR_TRIANGLE_BG_HL;
             }];
         } else {
             _triangle.transform = CGAffineTransformMakeRotation((CGFloat) (M_PI * 2.0f));
@@ -296,7 +293,7 @@
             [UIView animateWithDuration:0.2 animations:^{
                 _backgroundView.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0];
                 _collectionView.frame = frame;
-                _triangleBackgroundView.backgroundColor = TRIANGLE_BG_COLOR_NORMAL;
+                _triangleBackgroundView.backgroundColor = COLOR_TRIANGLE_BG_NORMAL;
             }                completion:^(BOOL finish) {
                 [_backgroundView removeFromSuperview];
                 [_collectionView removeFromSuperview];
@@ -310,27 +307,28 @@
     _showSubMenu = showSubMenu;
 }
 
-
-- (NSArray *)category {
-    if (_category == nil) {
-        _category = @[@"类别1", @"类别2", @"类别3", @"类别4", @"类别5", @"类别5"];
-    }
-    return _category;
-}
-
 - (NSInteger)collectionView:(UICollectionView *)collectionView numberOfItemsInSection:(NSInteger)section {
     return _category.count;
 }
 
 - (UICollectionViewCell *)collectionView:(UICollectionView *)collectionView cellForItemAtIndexPath:(NSIndexPath *)indexPath {
     LabelCollectionCell * cell = [collectionView dequeueReusableCellWithReuseIdentifier:COLLECTION_VIEW_CELL forIndexPath:indexPath];
-    cell.label.text = _category[(NSUInteger) indexPath.row];
-    if(_selectedIndex == indexPath.row) {
-        cell.label.backgroundColor = COLLECTION_CELL_HEIGHT_LIGHT_COLOR;
-        cell.label.textColor = TEXT_SELECT_COLOR;
+    NSString * title;
+    if (decodeDataBlock) {
+        title = decodeDataBlock(_category[(NSUInteger) indexPath.row]);
     } else {
-        cell.label.backgroundColor = COLLECTION_CELL_NORMAL_COLOR;
-        cell.label.textColor = TEXT_NORMAL_COLOR;
+        NSAssert([_category[(NSUInteger) indexPath.row] isKindOfClass:[NSString class]],
+                @"[CBCategoryView Error]:data is not a string , "
+                        "please post a String Array or use decodeData() to decode data.");
+        title = _category[(NSUInteger) indexPath.row];
+    }
+    cell.label.text = title;
+    if (_selectedIndex == indexPath.row) {
+        cell.label.backgroundColor = COLOR_CELL_HL;
+        cell.label.textColor = COLOR_TEXT_SELECT;
+    } else {
+        cell.label.backgroundColor = COLOR_CELL_NORMAL;
+        cell.label.textColor = COLOR_TEXT_NORMAL;
     }
     return cell;
 }
@@ -339,15 +337,48 @@
     self.selectedIndex = (NSUInteger) indexPath.row;
 }
 
-- (void)controller:(UIViewController *)controller getChildViewController:(UIViewController * (^)(CBCategoryView * ,NSInteger))delegate {
-    self.controller = controller;
-    self.getChildController = delegate;
-    CGRect frame = controller.view.bounds;
-    frame.origin.y = self.frame.origin.y + self.frame.size.height;
-    frame.size.height -= frame.origin.y;
-    subViewOfController = [[UIView alloc] initWithFrame:frame];
-    subViewOfController.backgroundColor = [UIColor blackColor];
-    [controller.view addSubview:subViewOfController];
+- (CBCategoryView * (^)(UIViewController*))controller {
+    return ^CBCategoryView *(UIViewController * vc) {
+        self.superController = vc;
+        CGRect frame = vc.view.bounds;
+        frame.origin.y = self.frame.origin.y + self.frame.size.height;
+        frame.size.height -= frame.origin.y;
+        subViewOfController = [[UIView alloc] initWithFrame:frame];
+        [vc.view addSubview:subViewOfController];
+        return self;
+    };
 }
+
+
+- (CBCategoryView * (^)(NSArray *))data {
+    return ^CBCategoryView *(NSArray * array) {
+        _category = array;
+        return self;
+    };
+}
+
+- (CBCategoryView * (^)(NSString * (^)(id)))decodeData {
+    return ^CBCategoryView *(NSString * (^pFunction)(id)) {
+        decodeDataBlock = pFunction;
+        return self;
+    };
+}
+
+- (CBCategoryView * (^)(UIViewController * (^)(NSUInteger, id)))childControllerAdapter {
+    return ^CBCategoryView *(UIViewController * (^pFunction)(NSUInteger, id)) {
+        _childController = pFunction;
+        return self;
+    };
+}
+
+- (CBCategoryView * (^)())reloadData {
+    return ^CBCategoryView * {
+        _collectionViewHeight = ((_category.count - 1) / COLLECTION_ONE_LINE_COUNT + 1) * 36;
+        [self initScrollView];
+        [self initView];
+        return self;
+    };
+}
+
 
 @end
